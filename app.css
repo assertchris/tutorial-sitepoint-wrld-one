@@ -13,3 +13,30 @@ body {
     height: 100%;
     background-color: #000000;
 }
+
+.hidden {
+    display: none;
+}
+
+.image {
+    display: flex;
+    width: auto;
+    height: 100px;
+}
+
+.text {
+    display: flex;
+    padding-left: 10px;
+    font-size: 16px;
+    flex-direction: column;
+}
+
+.text > :not(:first-child) {
+    margin-top: 1em;
+}
+
+.popup {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+}

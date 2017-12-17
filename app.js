@@ -22,15 +22,19 @@ window.addEventListener("load", async () => {
     //
     // const { lat, lng } = lookup.results[0].geometry.location
 
-    const { lat, lng, zoom, color, seconds } = story[0]
+    const { lat, lng, zoom, color, seconds, image, text, time } = story[0]
 
     const map = Wrld.map("map", keys.wrld, {
         center: [lat, lng],
         zoom,
     })
 
+    if (time) {
+        map.themes.setTime(time)
+    }
+
     map.on("initialstreamingcomplete", () => {
-        highlightBuildingAt(lat, lng, color)
+        highlightBuildingAt(lat, lng, color, elevation => showPopup(lat, lng, image, text, elevation))
 
         if (story.length > 1) {
             setTimeout(() => showNextEvent(1), seconds * 1000)
@@ -39,10 +43,12 @@ window.addEventListener("load", async () => {
 
     let highlight = null
 
-    const highlightBuildingAt = (lat, lng, color) => {
+    const highlightBuildingAt = (lat, lng, color, onElevation) => {
         if (highlight) {
             highlight.remove()
         }
+
+        waitForElevation(onElevation)
 
         highlight = Wrld.buildings
             .buildingHighlight(
@@ -54,8 +60,30 @@ window.addEventListener("load", async () => {
             .addTo(map)
     }
 
+    let elevation = 0
+
+    const waitForElevation = onElevation => {
+        const listener = event => {
+            map.buildings.off("buildinginformationreceived", listener)
+
+            const information = event.buildingHighlight.getBuildingInformation()
+
+            if (!information) {
+                onElevation(0)
+            } else {
+                const dimensions = information.getBuildingDimensions()
+                const ground = dimensions.getBaseAltitude()
+                const elevation = dimensions.getTopAltitude() - ground
+
+                onElevation(elevation)
+            }
+        }
+
+        map.buildings.on("buildinginformationreceived", listener)
+    }
+
     const showNextEvent = index => {
-        const { lat, lng, zoom, degrees, color, seconds } = story[index]
+        const { lat, lng, zoom, degrees, color, seconds, image, text, time } = story[index]
 
         map.setView([lat, lng], zoom, {
             headingDegrees: degrees,
@@ -64,12 +92,35 @@ window.addEventListener("load", async () => {
         })
 
         setTimeout(() => {
-            highlightBuildingAt(lat, lng, color)
+            if (time) {
+                map.themes.setTime(time)
+            }
+
+            highlightBuildingAt(lat, lng, color, elevation => showPopup(lat, lng, image, text, elevation))
 
             if (story.length > index + 1) {
                 setTimeout(() => showNextEvent(index + 1), seconds * 1000)
             }
         }, 2.5 * 1000)
+    }
+
+    let popup = null
+
+    const showPopup = (lat, lng, image, text, elevation) => {
+        const src = document.querySelector(image).src
+
+        const element1 = "<img class='image' src='" + src + "' />"
+        const element2 = "<div class='text'>" + text + "</div>"
+        const element3 = "<div class='popup'>" + element1 + element2 + "</div>"
+
+        popup = L.popup({
+            closeButton: false,
+            autoPanPaddingTopLeft: 100,
+            elevation: Math.max(20, elevation / 2),
+        })
+            .setLatLng(L.latLng(lat, lng))
+            .setContent(element3)
+            .openOn(map)
     }
 
     const nextTrack = () => {
@@ -81,4 +132,6 @@ window.addEventListener("load", async () => {
     }
 
     nextTrack()
+
+    map.themes.setWeather(Wrld.themes.weather.Snowy)
 })
