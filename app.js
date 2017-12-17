@@ -7,6 +7,7 @@ const keys = {
 }
 
 const story = require("./story")
+const tracks = require("./tracks")
 
 window.addEventListener("load", async () => {
     // const address = encodeURIComponent("empire state building, new york")
@@ -65,9 +66,19 @@ window.addEventListener("load", async () => {
         setTimeout(() => {
             highlightBuildingAt(lat, lng, color)
 
-            if (story.length > index) {
+            if (story.length > index + 1) {
                 setTimeout(() => showNextEvent(index + 1), seconds * 1000)
             }
         }, 2.5 * 1000)
     }
+
+    const nextTrack = () => {
+        const index = Math.floor(Math.random() * tracks.length)
+
+        const audio = new Audio(document.querySelector(tracks[index]).src)
+        audio.addEventListener("ended", () => nextTrack())
+        audio.play()
+    }
+
+    nextTrack()
 })
